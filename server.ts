@@ -18,17 +18,14 @@ async function startServer() {
 
   // 1. Keep-Alive / Health Endpoint (Essential for Cloud Run, Render & Health Pingers)
   app.get('/health', (req, res) => {
+    const dbStatus = db.getDbStatus();
     res.json({
       status: 'ok',
       uptime: process.uptime(),
       timestamp: new Date().toISOString(),
       service: 'Swami Adgadanand Public School ERP & Portal',
       institution: 'S.A. Public School (UP Board Affiliated)',
-      database: {
-        connected: db.isMongoConnected(),
-        storageType: db.isMongoConnected() ? 'MongoDB Atlas (Persistent)' : 'In-Memory (Ephemeral Fallback)',
-        warning: !db.isMongoConnected() ? 'MONGODB_URI not configured or disconnected. Data will not persist across restarts.' : undefined,
-      },
+      database: dbStatus,
       stats: {
         totalStudents: db.students.length,
         totalTeachers: db.teachers.length,
@@ -36,6 +33,24 @@ async function startServer() {
         notices: db.notices.length,
       },
     });
+  });
+
+  // Database System Status & Manual Reconnect APIs
+  app.get('/api/system/db-status', (req, res) => {
+    res.json(db.getDbStatus());
+  });
+
+  app.post('/api/system/db-reconnect', async (req, res) => {
+    try {
+      const result = await db.reconnect();
+      res.json(result);
+    } catch (err: any) {
+      res.status(500).json({
+        success: false,
+        message: err?.message || 'Reconnect failed',
+        status: db.getDbStatus(),
+      });
+    }
   });
 
   // 2. Authentication APIs
@@ -1036,10 +1051,7 @@ async function startServer() {
     const todayAbsent = todayAtt.filter((a) => a.status === 'absent').length;
 
     res.json({
-      database: {
-        connected: db.isMongoConnected(),
-        type: db.isMongoConnected() ? 'MongoDB Atlas (Persistent Cloud Storage)' : 'In-Memory Store (Ephemeral Fallback)',
-      },
+      database: db.getDbStatus(),
       totalStudents,
       totalTeachers,
       totalClasses: 10,

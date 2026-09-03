@@ -6,10 +6,6 @@ import {
   CheckCircle2,
   Phone,
   Mail,
-  ShieldCheck,
-  Award,
-  Users,
-  Sparkles,
 } from 'lucide-react';
 
 interface FacilitiesPageProps {
@@ -17,11 +13,10 @@ interface FacilitiesPageProps {
   onOpenLogin: () => void;
 }
 
-export const FacilitiesPage: React.FC<FacilitiesPageProps> = ({ onSelectTab, onOpenLogin }) => {
+export const FacilitiesPage: React.FC<FacilitiesPageProps> = ({ onSelectTab }) => {
   const { siteContent } = useSiteContent();
 
   const school = siteContent?.school;
-  const facilities = siteContent?.facilities || [];
 
   return (
     <div className="max-w-5xl mx-auto px-4 sm:px-6 py-8 space-y-8 animate-in fade-in" id="facilities-page">

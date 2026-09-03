@@ -182,6 +182,14 @@ export class DataStore {
   private mongoClient: MongoClient | null = null;
   private mongoDb: Db | null = null;
   private isConnected: boolean = false;
+  public lastConnectionError: string | null = null;
+  public connectionDiagnosis: {
+    status: 'connected' | 'ip_whitelist_required' | 'auth_failed' | 'not_configured' | 'connection_error';
+    title: string;
+    message: string;
+    actionSteps: string[];
+    outboundIp?: string;
+  } | null = null;
 
   private usersCol: Collection<UserAccount> | null = null;
   private studentsCol: Collection<Student> | null = null;
@@ -204,42 +212,72 @@ export class DataStore {
     return this.isConnected;
   }
 
+  public getDbStatus() {
+    return {
+      connected: this.isConnected,
+      storageType: this.isConnected ? 'MongoDB Atlas (Persistent Cloud Storage)' : 'In-Memory Store (Ephemeral Fallback)',
+      uriConfigured: !!process.env.MONGODB_URI,
+      databaseName: this.mongoDb?.databaseName || 'saps_erp',
+      error: this.lastConnectionError,
+      diagnosis: this.connectionDiagnosis,
+    };
+  }
+
+  /**
+   * Allows manual or automated reconnection to MongoDB Atlas
+   */
+  public async reconnect(): Promise<{ success: boolean; message: string; status: any }> {
+    console.log('[MongoDB] Manual reconnection attempt triggered...');
+    await this.init();
+    return {
+      success: this.isConnected,
+      message: this.isConnected
+        ? 'Successfully connected to MongoDB Atlas! Cloud persistence is active.'
+        : this.connectionDiagnosis?.message || 'Failed to connect to MongoDB cluster.',
+      status: this.getDbStatus(),
+    };
+  }
+
   /**
    * Connects to MongoDB Atlas using MONGODB_URI.
-   * If MONGODB_URI is absent or invalid, falls back to in-memory mode and logs a prominent warning.
+   * If MONGODB_URI is absent or invalid, falls back to in-memory mode with clear diagnostic guidance.
    */
   async init(): Promise<void> {
     const mongoUri = process.env.MONGODB_URI?.trim();
 
     if (!mongoUri) {
-      console.warn(
-        '\n========================================================================\n' +
-          '⚠️  [SAPS ERP WARNING] MONGODB_URI is not set!\n' +
-          '    Running in ephemeral IN-MEMORY fallback mode.\n' +
-          '    ALL CHANGES (students, teachers, attendance, fees, CMS) WILL BE LOST\n' +
-          '    when the server restarts.\n' +
-          '    To enable permanent persistent cloud storage, set MONGODB_URI in .env\n' +
-          '========================================================================\n'
-      );
       this.isConnected = false;
+      this.lastConnectionError = 'MONGODB_URI environment variable is not configured';
+      this.connectionDiagnosis = {
+        status: 'not_configured',
+        title: 'MongoDB Atlas URI Not Configured',
+        message: 'No MONGODB_URI was provided. The application is running smoothly in ephemeral in-memory mode.',
+        actionSteps: [
+          'Create a free MongoDB cluster on https://cloud.mongodb.com',
+          'Add your connection string as MONGODB_URI in your environment or Settings',
+          'Whitelist 0.0.0.0/0 in Atlas Network Access'
+        ]
+      };
+      console.log('[MongoDB] Running in In-Memory fallback mode (MONGODB_URI not configured).');
       return;
     }
 
     try {
       console.log('[MongoDB] Connecting to MongoDB cluster...');
 
-      // First attempt with standard connection options + IPv4 priority
+      // Close previous client if reconnecting
+      if (this.mongoClient) {
+        try {
+          await this.mongoClient.close();
+        } catch (_) {}
+        this.mongoClient = null;
+      }
+
+      // Standard robust connection options for cloud containers & MongoDB Atlas
       const clientOptions: any = {
         serverSelectionTimeoutMS: 5000,
         connectTimeoutMS: 5000,
-        family: 4, // Prevents OpenSSL IPv6 handshake alert 80
       };
-
-      // Add TLS options if using mongodb+srv or ssl
-      if (mongoUri.includes('mongodb+srv://') || mongoUri.includes('ssl=true') || mongoUri.includes('tls=true')) {
-        clientOptions.tls = true;
-        clientOptions.tlsAllowInvalidCertificates = true;
-      }
 
       this.mongoClient = new MongoClient(mongoUri, clientOptions);
 
@@ -276,6 +314,13 @@ export class DataStore {
       ]);
 
       this.isConnected = true;
+      this.lastConnectionError = null;
+      this.connectionDiagnosis = {
+        status: 'connected',
+        title: 'MongoDB Atlas Connected',
+        message: `Persistent cloud database "${dbName}" is active and synced.`,
+        actionSteps: []
+      };
 
       // Check if this database has already been seeded
       const usersCount = await this.usersCol.countDocuments();
@@ -314,13 +359,68 @@ export class DataStore {
       this.mongoDb = null;
       this.isConnected = false;
 
-      console.warn(
-        '\n========================================================================\n' +
-          `⚠️  [MongoDB Connection Warning] Could not connect to MongoDB cluster: ${err.message}\n` +
-          '   Note: If using MongoDB Atlas, ensure your Atlas Network Access allows 0.0.0.0/0 (Allow from anywhere).\n' +
-          '   The application is running seamlessly using active IN-MEMORY storage.\n' +
-          '========================================================================\n'
-      );
+      const rawMsg = String(err?.message || '');
+      this.lastConnectionError = rawMsg;
+
+      const isSslAlert80 =
+        rawMsg.includes('SSL alert number 80') ||
+        rawMsg.includes('tlsv1 alert internal error') ||
+        err?.code === 'ERR_SSL_TLSV1_ALERT_INTERNAL_ERROR';
+
+      const isAuthFailed =
+        rawMsg.includes('Authentication failed') ||
+        rawMsg.includes('bad auth') ||
+        rawMsg.includes('auth error');
+
+      if (isSslAlert80) {
+        this.connectionDiagnosis = {
+          status: 'ip_whitelist_required',
+          title: 'MongoDB Atlas IP Access Whitelist Required',
+          message: 'Your MongoDB Atlas cluster received the connection, but refused the TLS handshake (SSL Alert 80). In Atlas, cloud connections are blocked until 0.0.0.0/0 is added to Network Access.',
+          actionSteps: [
+            'Open MongoDB Atlas (https://cloud.mongodb.com) in your browser.',
+            'Under "Security" in the left sidebar menu, click "Network Access".',
+            'Click the "+ ADD IP ADDRESS" button.',
+            'Click "ALLOW ACCESS FROM ANYWHERE" (which adds 0.0.0.0/0), then click "Confirm".',
+            'Wait ~30 seconds for Atlas to save, then click "Retry Connection" in the Admin Dashboard.'
+          ],
+          outboundIp: '0.0.0.0/0',
+        };
+
+        console.log(
+          '\n========================================================================\n' +
+            'ℹ️  [MongoDB Atlas] Network Access Notice: IP Whitelist Required\n' +
+            '   Atlas closed handshake with SSL Alert 80 because server IP is not yet whitelisted.\n' +
+            '   Fix: Open cloud.mongodb.com -> Network Access -> Add IP -> "0.0.0.0/0"\n' +
+            '   [Status] Running safely in active In-Memory fallback mode. ERP is fully functional.\n' +
+            '========================================================================\n'
+        );
+      } else if (isAuthFailed) {
+        this.connectionDiagnosis = {
+          status: 'auth_failed',
+          title: 'MongoDB Database Authentication Failed',
+          message: 'The database username or password in MONGODB_URI was rejected by your MongoDB cluster.',
+          actionSteps: [
+            'Check Database Access in MongoDB Atlas (cloud.mongodb.com).',
+            'Ensure the database user exists and the password in your connection string matches.',
+            'If the password has special characters (@, :, /, #), URL-encode them.'
+          ]
+        };
+        console.log('[MongoDB] Authentication failed. Running in active In-Memory fallback mode.');
+      } else {
+        this.connectionDiagnosis = {
+          status: 'connection_error',
+          title: 'MongoDB Connection Notice',
+          message: `Unable to connect to MongoDB: ${rawMsg.substring(0, 150)}`,
+          actionSteps: [
+            'Ensure the cluster is online and reachable.',
+            'Check MONGODB_URI in Settings/environment.',
+            'Add 0.0.0.0/0 to Atlas Network Access.'
+          ]
+        };
+        console.log(`[MongoDB] Running in In-Memory fallback mode (${rawMsg.substring(0, 80)}).`);
+      }
+
       this.seedInitialData();
       this.ensureAdminAccountInMemory();
     }

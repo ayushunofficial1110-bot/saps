@@ -35,6 +35,7 @@ import {
   LogIn,
   Key,
   Globe,
+  Database,
 } from 'lucide-react';
 
 interface AdminDashboardProps {
@@ -158,6 +159,25 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   const showToast = (msg: string) => {
     setActionFeedback(msg);
     setTimeout(() => setActionFeedback(null), 4000);
+  };
+
+  const [isReconnectingDb, setIsReconnectingDb] = useState(false);
+  const handleReconnectDatabase = async () => {
+    setIsReconnectingDb(true);
+    try {
+      const res = await fetch('/api/system/db-reconnect', { method: 'POST' });
+      const data = await res.json();
+      if (data.success) {
+        showToast('✅ MongoDB Atlas connected successfully! Cloud persistence active.');
+      } else {
+        showToast(data.message || 'Connection check completed.');
+      }
+      await fetchData();
+    } catch {
+      showToast('Reconnection check failed. Please check network.');
+    } finally {
+      setIsReconnectingDb(false);
+    }
   };
 
   // Add Single Student
@@ -595,6 +615,85 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
               <div className="text-[11px] text-slate-500">Term 2 Balance Reminders Active</div>
             </div>
           </div>
+
+          {/* Cloud Database Persistence Status Banner */}
+          {stats.database?.connected ? (
+            <div className="bg-emerald-50 border border-emerald-200 rounded-2xl p-4 flex items-center justify-between gap-3 text-xs text-emerald-900">
+              <div className="flex items-center gap-2.5">
+                <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse" />
+                <div>
+                  <span className="font-bold">MongoDB Atlas Cloud Database: Connected & Active</span>
+                  <p className="text-[11px] text-emerald-700">All school ERP data (students, marks, fees, CMS) is persistently preserved in the cloud.</p>
+                </div>
+              </div>
+              <span className="bg-emerald-100 text-emerald-800 font-semibold px-2.5 py-1 rounded-full text-[10px] uppercase tracking-wide">
+                Persistent Storage Active
+              </span>
+            </div>
+          ) : (
+            <div className="bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-300/80 rounded-2xl p-4 sm:p-5 shadow-sm space-y-3">
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div className="flex items-start gap-3">
+                  <div className="p-2 bg-amber-100 text-amber-800 rounded-xl mt-0.5">
+                    <Database className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <h4 className="text-sm font-bold text-slate-900">
+                        {stats.database?.diagnosis?.title || 'MongoDB Atlas Status: IP Whitelist Required'}
+                      </h4>
+                      <span className="bg-amber-100 text-amber-800 text-[10px] font-bold px-2 py-0.5 rounded-md uppercase">
+                        In-Memory Fallback Active
+                      </span>
+                    </div>
+                    <p className="text-xs text-slate-600 mt-1 max-w-2xl leading-relaxed">
+                      {stats.database?.diagnosis?.message ||
+                        'Your cluster received the connection, but refused the TLS handshake (SSL alert 80). In MongoDB Atlas, network access is restricted until you allow connections from anywhere.'}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={handleReconnectDatabase}
+                    disabled={isReconnectingDb}
+                    className="bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold px-3.5 py-2 rounded-xl transition flex items-center gap-1.5 shadow-sm disabled:opacity-50 cursor-pointer"
+                  >
+                    <RefreshCw className={`w-3.5 h-3.5 ${isReconnectingDb ? 'animate-spin' : ''}`} />
+                    {isReconnectingDb ? 'Testing...' : 'Test & Connect Atlas'}
+                  </button>
+                  <button
+                    onClick={() => setActiveTab('deployment')}
+                    className="bg-white hover:bg-slate-100 text-slate-700 border border-slate-300 text-xs font-semibold px-3 py-2 rounded-xl transition cursor-pointer"
+                  >
+                    Setup Guide
+                  </button>
+                </div>
+              </div>
+
+              {/* Step by step quick guidance */}
+              <div className="bg-white/80 rounded-xl p-3 border border-amber-200/60 text-xs text-slate-700 space-y-1.5">
+                <div className="font-semibold text-slate-900 flex items-center gap-1.5 text-[11px] uppercase tracking-wider text-amber-800">
+                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                  How to enable cloud persistence in 30 seconds:
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-[11px]">
+                  <div className="bg-amber-50/70 p-2 rounded-lg">
+                    <strong>1. Open Atlas Console</strong>
+                    <div className="text-slate-500">Go to cloud.mongodb.com & select your cluster.</div>
+                  </div>
+                  <div className="bg-amber-50/70 p-2 rounded-lg">
+                    <strong>2. Network Access</strong>
+                    <div className="text-slate-500">Under Security → Click "Add IP Address" → Choose <strong>0.0.0.0/0 (Allow from anywhere)</strong>.</div>
+                  </div>
+                  <div className="bg-amber-50/70 p-2 rounded-lg">
+                    <strong>3. Click "Test & Connect"</strong>
+                    <div className="text-slate-500">Click the button above to verify connection without restarting!</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* Quick Action Bar */}
           <div className="bg-gradient-to-r from-blue-50 to-amber-50 p-6 rounded-3xl border border-blue-200 flex flex-wrap items-center justify-between gap-4">

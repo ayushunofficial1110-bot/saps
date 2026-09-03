@@ -128,10 +128,6 @@ export const HomePage: React.FC<HomePageProps> = ({ onSelectTab, onOpenLogin }) 
             {/* Right Col: School Seal Card */}
             <div className="lg:col-span-5 flex justify-center">
               <div className="bg-white/10 backdrop-blur-md border-2 border-[#F5B301]/40 p-8 rounded-3xl text-center shadow-2xl relative w-full max-w-sm">
-                <div className="absolute -top-3 right-6 bg-[#F5B301] text-[#0B1F4D] text-[10px] font-black uppercase px-3 py-0.5 rounded-full shadow">
-                  ESTD. 2012
-                </div>
-
                 <div className="flex justify-center mb-4">
                   <SchoolLogo size={140} />
                 </div>
