@@ -141,7 +141,7 @@ export const Footer: React.FC<FooterProps> = ({ onSelectTab, onOpenLogin }) => {
                 <MapPin className="w-4 h-4 text-red-400 shrink-0 mt-0.5" />
                 <span className="whitespace-pre-line">
                   {school?.address ||
-                    `Swami Adgadanand Public School Campus,\nMain Highway Road, Phulpur / Varanasi Sector,\nUttar Pradesh - 221002, India`}
+                    `Swami Adgadanand Public School , Mahadaur, Shahabganj, Chakia-Chandauli India`}
                 </span>
               </li>
               <li className="flex items-center gap-2.5">
