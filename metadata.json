@@ -1,0 +1,6 @@
+{
+  "name": "Swami Adgadanand Public School ERP & Portal",
+  "description": "Official website and integrated ERP management system (Attendance, Fees, WhatsApp Alerts, Excel Import) for Swami Adgadanand Public School.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
