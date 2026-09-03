@@ -5,7 +5,6 @@ import {
   MapPin,
   Phone,
   Mail,
-  Clock,
   ShieldCheck,
   Award,
   ChevronRight,
@@ -43,10 +42,6 @@ export const Footer: React.FC<FooterProps> = ({ onSelectTab, onOpenLogin }) => {
               {school?.description ||
                 'Inspired by the holy ideals and divine wisdom of Param Pujya Swami Adgadanand Ji Maharaj, providing value-based, holistic education with strong academic foundations for students of Uttar Pradesh.'}
             </p>
-            <div className="flex items-center gap-2 pt-1 text-xs text-amber-300 font-semibold">
-              <Clock className="w-4 h-4 text-[#F5B301]" />
-              <span>{school?.helpSpanText || '24hr Assistance & Helpline'}</span>
-            </div>
           </div>
 
           {/* Col 2: Quick Links */}
@@ -160,10 +155,6 @@ export const Footer: React.FC<FooterProps> = ({ onSelectTab, onOpenLogin }) => {
                 <a href={`mailto:${school?.email || 'sapublicschool21@gmail.com'}`} className="hover:underline text-slate-200">
                   {school?.email || 'sapublicschool21@gmail.com'}
                 </a>
-              </li>
-              <li className="flex items-center gap-2.5">
-                <Clock className="w-4 h-4 text-amber-300 shrink-0" />
-                <span className="text-amber-300 font-semibold">{school?.helpSpanText || '24hr Helpline'}</span>
               </li>
             </ul>
           </div>

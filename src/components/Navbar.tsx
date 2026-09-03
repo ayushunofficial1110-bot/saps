@@ -5,7 +5,6 @@ import { useSiteContent } from '../context/SiteContentContext';
 import {
   Phone,
   Mail,
-  Clock,
   LogIn,
   LogOut,
   KeyRound,
@@ -38,7 +37,6 @@ export const Navbar: React.FC<NavbarProps> = ({
 
   const phone = siteContent?.school?.phone || '+91 9415754349';
   const email = siteContent?.school?.email || 'sapublicschool21@gmail.com';
-  const helpSpan = siteContent?.school?.helpSpanText || '24hr';
 
   const navLinks = [
     { id: 'home', label: 'Home' },
@@ -76,11 +74,6 @@ export const Navbar: React.FC<NavbarProps> = ({
               <Mail className="w-3 h-3 text-[#00AEEF]" />
               <span>{email}</span>
             </a>
-            <span className="hidden md:inline text-slate-400">|</span>
-            <span className="hidden md:flex items-center gap-1 text-amber-300 font-medium">
-              <Clock className="w-3 h-3 text-amber-300" />
-              <span>{helpSpan}</span>
-            </span>
           </div>
 
           <div className="flex items-center gap-3">

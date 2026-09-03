@@ -15,7 +15,6 @@ import {
   Phone,
   Mail,
   Bell,
-  Clock,
   ShieldCheck,
   Building2,
   HeartHandshake,
@@ -156,10 +155,6 @@ export const HomePage: React.FC<HomePageProps> = ({ onSelectTab, onOpenLogin }) 
                       <Phone className="w-3 h-3 text-[#00AEEF]" />
                       <span>Helpline: <strong className="text-white">{school?.phone || '+91 9415754349'}</strong></span>
                     </a>
-                    <span className="flex items-center gap-1">
-                      <Clock className="w-3 h-3 text-amber-300" />
-                      <strong className="text-amber-300">{school?.helpSpanText || '24hr'}</strong>
-                    </span>
                   </div>
                   <div className="flex items-center gap-1.5 text-slate-200">
                     <Mail className="w-3 h-3 text-[#00AEEF] shrink-0" />
@@ -294,13 +289,6 @@ export const HomePage: React.FC<HomePageProps> = ({ onSelectTab, onOpenLogin }) 
                   <span>Read full history & blessings of S.A. Public School</span>
                   <ArrowRight className="w-3.5 h-3.5" />
                 </button>
-                <button
-                  onClick={() => onSelectTab('family')}
-                  className="text-xs font-bold text-amber-700 hover:text-amber-900 flex items-center gap-1.5 bg-amber-50 px-3 py-1.5 rounded-lg border border-amber-200"
-                >
-                  <Users className="w-3.5 h-3.5" />
-                  <span>Meet Our Faculty (My School Family)</span>
-                </button>
               </div>
             </div>
           </div>
@@ -404,10 +392,6 @@ export const HomePage: React.FC<HomePageProps> = ({ onSelectTab, onOpenLogin }) 
                   <Mail className="w-4 h-4" />
                   <span>Email: <strong>{school?.email || 'sapublicschool21@gmail.com'}</strong></span>
                 </a>
-                <div className="flex items-center gap-1.5 text-amber-300 font-semibold">
-                  <Clock className="w-4 h-4 text-amber-300" />
-                  <span>{school?.helpSpanText || '24hr'}</span>
-                </div>
               </div>
             </div>
 
